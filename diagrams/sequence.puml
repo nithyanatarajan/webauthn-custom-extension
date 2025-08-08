@@ -1,0 +1,111 @@
+@startuml
+title WebAuthn Passkey Flows with Custom Extension Server
+
+actor User
+participant "Browser (Client)" as Browser
+participant "Authenticator" as Auth
+participant "RP Server (WebAuthn)" as RP
+participant "Custom Extension Server" as ExtServer
+
+group Passkey Registration
+User -> Browser: Triggers registration
+Browser -> RP: POST /register/begin { username }
+RP --> Browser: publicKeyCredentialCreationOptions containing customExtensions
+note over RP
+Returns publicKeyCredentialCreationOptions containing customExtensions
+{
+  "publicKey": {
+    ...
+    "customExtensions": {
+      "url": "http://localhost:9001/extensions/register",
+      "data": {
+          "ip": "optional",
+          "location": "optional",
+      }
+    }
+  }
+}
+end note
+
+group Custom Extension Registration
+Browser -> Browser: Reads `customExtensions` from RP response
+Browser -> Browser: Format data needed to pass to "Extension Server"
+Browser -> ExtServer: POST /extensions/register { username, data }
+ExtServer -> ExtServer: Verification and data extraction
+ExtServer --> Browser: { status }
+end
+
+Browser -> Browser: Prepare publicKey credential
+note right of Browser
+Invokes navigator.credentials.create() using publicKeyCredentialOptions
+end note
+
+Browser -> Auth: navigator.credentials.create(options)
+Auth -> Browser: Attestation response (clientDataJSON, attestationObject)
+note right of Browser
+Receives attestation data for submission to the RP server.
+end note
+
+Browser -> RP: POST /registration/complete
+note right of RP
+• Verifies attestation response
+• Binds credential to user
+end note
+
+group Custom Extension Registration Verification
+RP -> ExtServer: POST /extensions/register/verify
+ExtServer -> ExtServer: Verification and data validation
+ExtServer --> RP: { status }
+end
+
+RP --> Browser: { status }
+end
+
+group Passkey Authentication
+User -> Browser: Triggers authentication
+Browser -> RP: POST /authenticate/begin { username }
+RP --> Browser: publicKeyCredentialCreationOptions containing customExtensions
+note over RP
+Returns publicKeyCredentialCreationOptions containing customExtensions
+{
+  "publicKey": {
+    ...
+    "customExtensions": {
+      "url": "http://localhost:9001/extensions/authenticate",
+      "data": {
+          "ip": "required",
+          "location": "required",
+          "device": "optional",
+      }
+    }
+  }
+}
+end note
+
+group Custom Extension Authentication
+Browser -> Browser: Reads `customExtensions` from RP response
+Browser -> Browser: Format data needed to pass to "Extension Server"
+Browser -> ExtServer: POST /extensions/authenticate { username, data }
+ExtServer -> ExtServer: Verification and data extraction
+ExtServer --> Browser: { status }
+end
+
+
+Browser -> Auth: navigator.credentials.get(options)
+Auth -> Browser: Assertion (authenticatorData, clientDataJSON, signature)
+
+Browser -> RP: POST /authentication/complete
+note right of RP
+• Verifies assertion
+• Issues session
+end note
+
+group Custom Extension Authentication Verification
+RP -> ExtServer: POST /extensions/authenticate/verify
+ExtServer -> ExtServer: Verification and data validation
+ExtServer --> RP: { status }
+end
+
+RP --> Browser: { status }
+end
+@enduml
