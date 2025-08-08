@@ -1,0 +1,118 @@
+version: '3'
+
+vars:
+  RP_PORT: '8000'
+  EXT_PORT: '9000'
+  WEB_PORT: '5173'
+  RP_DIR: backend/apps/passkey_server/src
+  EXT_DIR: backend/apps/extension_server/src
+  WEB_DIR: frontend/passkey_web
+  BACKEND_DIR: backend
+
+tasks:
+
+  default:
+    silent: true
+    cmds:
+      - task --list
+
+  # ---------- Install / Setup ----------
+  install:
+    desc: Install all deps (backend + frontend)
+    deps: [ install:backend, install:frontend ]
+
+
+  install:backend:
+    desc: "Create virtualenv and sync all dependencies"
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - uv venv --allow-existing --python 3.12
+      - uv sync --all-extras --dev
+
+  install:frontend:
+    desc: "Install frontend dependencies"
+    dir: '{{.WEB_DIR}}'
+    cmds:
+      - npm install
+
+  # ---------- Dev Servers ----------
+  dev:
+    desc: Run all servers and client in parallel
+    cmds:
+      - |
+        task dev:ext &
+        task dev:rp &
+        task dev:web &
+        wait
+
+  dev:rp:
+    desc: Start Passkey (Relying Party) Server
+    dir: '{{.RP_DIR}}'
+    cmd: uv run uvicorn main:app --reload --host 0.0.0.0 --port {{.RP_PORT}}
+
+  dev:ext:
+    desc: Start Extension Server
+    dir: '{{.EXT_DIR}}'
+    cmd: uv run uvicorn main:app --reload --host 0.0.0.0 --port {{.EXT_PORT}}
+
+  dev:web:
+    desc: Start Passkey Client (Vite + JS)
+    dir: '{{.WEB_DIR}}'
+    cmd: npm run dev -- --host --port {{.WEB_PORT}
+
+  # ---------- Lint / Format / Test (Python) ----------
+  ci:py:
+    desc: Run all Python checks for CI
+    # This task is intended for CI/CD pipelines
+    deps: [ lint:py, test:py ]
+
+  lft:py:
+    desc: Run all Python checks (lint, format, test)
+    deps: [ lint:py, format:py, test:py ]
+
+  lint:py:
+    desc: Run ruff checks across backend
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - uv run ruff check .
+
+  format:py:
+    desc: Auto-format with ruff
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - uv run ruff format .
+
+  test:py:
+    desc: Run pytest across backend
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - uv run pytest -q
+
+  # ---------- Lint / Format / Test (JavaScript) ----------
+  ci:js:
+    desc: Run all JS checks for CI
+    # This task is intended for CI/CD pipelines
+    dir: '{{.WEB_DIR}}'
+    cmd: npm run ci
+
+  lft:js:
+    desc: Run all JS checks (lint, format, test)
+    deps: [ lint:js, format:js, test:js ]
+
+  lint:js:
+    desc: Run ESLint across frontend
+    dir: '{{.WEB_DIR}}'
+    cmds:
+      - npm run lint:fix
+
+  format:js:
+    desc: Auto-format with Prettier
+    dir: '{{.WEB_DIR}}'
+    cmds:
+      - npm run format:fix
+
+  test:js:
+    desc: Run frontend tests
+    dir: '{{.WEB_DIR}}'
+    cmds:
+      - npm run test:ci
