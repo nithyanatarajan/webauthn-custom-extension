@@ -1,0 +1,61 @@
+[project]
+name = "webauthn-custom-extension"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "python-jose",
+    "fido2",
+    "httpx",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff", # lint + format
+    "pytest", # testing framework
+    "pytest-asyncio", # async test support
+    "pytest-cov", # coverage reporting
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+fix = true  # Auto-fix issues
+
+[tool.ruff.format]
+quote-style = "single"
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "I", "B", "UP", "PL", "T20", "RUF"
+]
+ignore = []  # Ignore missing docstrings
+
+[tool.ruff.lint.isort]
+force-single-line = false
+lines-between-types = 1
+combine-as-imports = true
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.params.Depends",
+    "fastapi.Query",
+    "fastapi.params.Query",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**/*.py" = ["PLR2004"]
+
+#[tool.pytest.ini_options]
+#pythonpath = [
+#    "apps/extension_server/src",
+#    "apps/passkey_server/src",
+#    "libs/shared-utils/src"
+#]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["apps", "libs/shared-utils/src"]
