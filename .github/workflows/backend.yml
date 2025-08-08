@@ -1,0 +1,45 @@
+name: Backend Python CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  ci-backend:
+    name: Lint and Test (Python)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv (Python package manager)
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+
+      - name: Show versions
+        run: |
+          uv --version
+          uv run python --version
+          task --version
+
+      - name: Install dependencies
+        run: task install:backend
+
+      - name: Run Python CI
+        env:
+          PYTHONUNBUFFERED: '1'
+        run: task ci:py
