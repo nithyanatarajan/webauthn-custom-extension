@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Passkey POC</title>
+    <script type="module">
+      import {handleAuthenticate, handleRegister} from './src/main.js';
+      import {initTabs} from './src/dom.js';
+
+      window.handleRegister = handleRegister;
+      window.handleAuthenticate = handleAuthenticate;
+
+      initTabs(document);
+    </script>
+    <link rel="stylesheet" href="./styles.css"/>
+</head>
+<body>
+<h2>🔐 Passkey + Extension Demo</h2>
+
+<div class="tabs">
+    <button class="tab-button" data-target="#register-tab">Register</button>
+    <button class="tab-button" data-target="#authenticate-tab">Authenticate</button>
+</div>
+
+<div id="register-tab" class="tab-content">
+    <h3>1. Register</h3>
+    <form data-action="register">
+        <input name="username" placeholder="Enter username (email)" required/>
+        <button type="submit">Register</button>
+    </form>
+</div>
+
+<div id="authenticate-tab" class="tab-content">
+    <h3>2. Authenticate</h3>
+    <form data-action="authenticate">
+        <input name="username" class="username" readonly/>
+        <button type="submit">Authenticate</button>
+    </form>
+</div>
+
+
+<h3>📤 Output</h3>
+<pre id="output"></pre>
+
+</body>
+</html>

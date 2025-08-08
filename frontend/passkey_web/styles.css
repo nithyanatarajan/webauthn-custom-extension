@@ -1,0 +1,112 @@
+/* === Base === */
+body {
+    font-family: sans-serif;
+    max-width: 400px;
+    margin: 4rem auto;
+    padding: 0 1rem;
+    text-align: center;
+    background-color: #f9f9f9;
+    color: #333;
+}
+
+h2 {
+    margin-bottom: 2rem;
+}
+
+form {
+    margin-bottom: 1rem;
+}
+
+input, textarea {
+    width: 100%;
+    padding: 0.6rem;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+button {
+    padding: 0.6rem 1.2rem;
+    font-size: 1rem;
+    border: none;
+    border-radius: 4px;
+    background-color: #005bbb;
+    color: white;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #004999;
+}
+
+button[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* === Output Panel === */
+pre#output {
+    white-space: pre-wrap;
+    text-align: left;
+    background: #fff;
+    padding: 1rem;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    font-family: monospace;
+}
+
+/* === Tabs === */
+.tabs {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.tab-button {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    background-color: #eee;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.tab-button.active {
+    background-color: #aaa;
+    font-weight: bold;
+}
+
+/* === Tab Content === */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* === Form Layout (Optional if you add labels later) === */
+.form-group {
+    margin-bottom: 1rem;
+    text-align: left;
+}
+
+label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 0.4rem;
+}
+
+input.username[readonly] {
+    background-color: #f8f9fa;       /* Light gray background */
+    color: #6c757d;                  /* Muted text */
+    border: 1px solid #ced4da;       /* Light border */
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 0.95rem;
+    height: 36px;
+    min-width: 240px;                /* Ensures consistent width even when empty */
+    box-sizing: border-box;
+}
