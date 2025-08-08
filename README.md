@@ -1,5 +1,8 @@
 # 🛡️ FIDO2 + WebAuthn Passkeys with Server-Triggered Custom Extension Server (POC)
 
+![CI for Backend Services](https://github.com/nithyanatarajan/webauthn-custom-extension/actions/workflows/backend.yml/badge.svg)
+![CI for Frontend Services](https://github.com/nithyanatarajan/webauthn-custom-extension/actions/workflows/frontend.yml/badge.svg)
+
 This proof-of-concept demonstrates a **standards-compliant** passkey-based authentication flow using **FIDO2/WebAuthn**,
 integrated with a **server-triggered custom extension server** to collect additional client-side data as part of the
 registration and authentication ceremonies.
@@ -200,11 +203,59 @@ On `/complete`, the RP verifies with the extension server before finalizing the 
 ## 📦 Project Structure
 
 ```bash
-.
-├── README.md
-├── passkey_web/         # Web frontend (Vanilla JS + Vite)
-├── passkey_server/      # RP server (FastAPI)
-├── extension_server/    # Custom extension server (FastAPI)
+webauthn-custom-extension/
+├── backend/                     # Backend services (RP server, extension server)
+│   ├── pyproject.toml                 # Root-level lint/test config for Python (optional)
+│   ├── uv.lock                        # uv lockfile for Python dependencies
+│   ├── apps/
+│   │   ├── extension_server/          # Custom extension server (FastAPI, pyproject.toml)
+│   │   │   └─── src/
+│   │   │       ├── .env.example
+│   │   │       ├── config.py
+│   │   │       ├── main.py
+│   │   │       ├── handlers/
+│   │   │       └── services/
+│   │   └── passkey_server/            # RP server (FastAPI, pyproject.toml)
+│   │       └─── src/
+│   │           ├── .env.example
+│   │           ├── config.py
+│   │           ├── main.py
+│   │           ├── handlers/
+│   │           └── services/
+│   └── tests/
+│       ├── extension_server/
+│       └── passkey_server/
+│
+├── frontend/                     # Frontend
+│   └── passkey_web/               # Web frontend (Vite + Vanilla JS)
+│       ├── public/
+│       ├── src/
+│       ├── .env.example
+│       ├── .prettierrc.json
+│       ├── eslint.config.js
+│       ├── index.html
+│       ├── package.json
+│       ├── package-lock.json
+│       ├── setupTests.js
+│       ├── style.css
+│       └── vitest.config.js
+│
+├── diagrams/                      # sequence.puml, architecture.puml, etc.
+│
+├── docs/                          # Overview.md, API.md, etc.
+│
+├── scripts/                       # Local dev scripts (start-all.sh, lint-all.sh, etc.)
+│
+├── .github/                       # GitHub Actions workflows
+│   └── workflows/
+│       ├── backend.yml            # Backend CI workflow
+│       └── frontend.yml           # Frontend CI workflow
+│
+├── taskfile.yml                   # Taskfile for managing tasks (install, dev, lint, etc.)
+│
+├── .gitignore                     # Git ignore rules
+│
+└── README.md                      # Project overview and setup instructions
 ```
 
 ---
