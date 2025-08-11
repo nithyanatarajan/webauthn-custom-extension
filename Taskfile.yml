@@ -4,8 +4,12 @@ vars:
   RP_PORT: '8000'
   EXT_PORT: '9000'
   WEB_PORT: '5173'
-  WEB_DIR: frontend/passkey_web
+  FRONTEND_DIR: frontend
   BACKEND_DIR: backend
+  WEB_DIR: '{{.FRONTEND_DIR}}/passkey_web'
+  PASSKEY_SERVER_DIR: '{{.BACKEND_DIR}}/apps/passkey_server'
+  EXTENSION_SERVER_DIR: '{{.BACKEND_DIR}}/apps/extension_server'
+  ENV_DIRS: '{{.PASSKEY_SERVER_DIR}} {{.EXTENSION_SERVER_DIR}} {{.WEB_DIR}}'
 
 tasks:
 
@@ -19,7 +23,6 @@ tasks:
     desc: Install all deps (backend + frontend)
     deps: [ install:backend, install:frontend ]
 
-
   install:backend:
     desc: "Create virtualenv and sync all dependencies"
     dir: '{{.BACKEND_DIR}}'
@@ -32,6 +35,12 @@ tasks:
     dir: '{{.WEB_DIR}}'
     cmds:
       - npm install
+
+  # ---------- Env Setup ----------
+  env:setup:
+    desc: Copy .env.example to .env if missing
+    cmds:
+      - for d in {{.ENV_DIRS}}; do if [ ! -f "$d/.env" ] && [ -f "$d/.env.example" ]; then cp "$d/.env.example" "$d/.env" && echo "[env:setup] Copied $d/.env.example -> $d/.env"; fi; done
 
   # ---------- Dev Servers ----------
   dev:
