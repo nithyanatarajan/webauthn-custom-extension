@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from passkey_server.src.main import app
+from passkey_server.main import app
 
 
 def test_health_endpoint():

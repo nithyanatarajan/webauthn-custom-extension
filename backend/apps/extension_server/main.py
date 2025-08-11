@@ -1,9 +1,10 @@
 # extension_server.py
 import uvicorn
 
-from extension_server.src.config import Config
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+from .config import Config
 
 app = FastAPI()
 

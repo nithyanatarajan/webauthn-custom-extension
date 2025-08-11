@@ -4,8 +4,6 @@ vars:
   RP_PORT: '8000'
   EXT_PORT: '9000'
   WEB_PORT: '5173'
-  RP_DIR: backend/apps/passkey_server/src
-  EXT_DIR: backend/apps/extension_server/src
   WEB_DIR: frontend/passkey_web
   BACKEND_DIR: backend
 
@@ -47,13 +45,13 @@ tasks:
 
   dev:rp:
     desc: Start Passkey (Relying Party) Server
-    dir: '{{.RP_DIR}}'
-    cmd: uv run uvicorn main:app --reload --host 0.0.0.0 --port {{.RP_PORT}}
+    dir: '{{.BACKEND_DIR}}'
+    cmd: uv run uvicorn passkey_server.main:app --reload --host 0.0.0.0 --port {{.RP_PORT}} --app-dir apps
 
   dev:ext:
     desc: Start Extension Server
-    dir: '{{.EXT_DIR}}'
-    cmd: uv run uvicorn main:app --reload --host 0.0.0.0 --port {{.EXT_PORT}}
+    dir: '{{.BACKEND_DIR}}'
+    cmd: uv run uvicorn extension_server.main:app --reload --host 0.0.0.0 --port {{.EXT_PORT}} --app-dir apps
 
   dev:web:
     desc: Start Passkey Client (Vite + JS)

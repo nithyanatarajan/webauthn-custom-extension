@@ -2,7 +2,8 @@ import uvicorn
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from passkey_server.src.config import Config
+
+from .config import Config
 
 app = FastAPI()
 

@@ -1,4 +1,4 @@
-from extension_server.src.main import app
+from extension_server.main import app
 from fastapi.testclient import TestClient
 
 
