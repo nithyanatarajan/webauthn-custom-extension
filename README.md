@@ -209,19 +209,17 @@ webauthn-custom-extension/
 │   ├── uv.lock                        # uv lockfile for Python dependencies
 │   ├── apps/
 │   │   ├── extension_server/          # Custom extension server (FastAPI, pyproject.toml)
-│   │   │   └─── src/
-│   │   │       ├── .env.example
-│   │   │       ├── config.py
-│   │   │       ├── main.py
-│   │   │       ├── handlers/
-│   │   │       └── services/
+│   │   │   ├── .env.example
+│   │   │   ├── config.py
+│   │   │   ├── main.py
+│   │   │   ├── handlers/
+│   │   │   └── services/
 │   │   └── passkey_server/            # RP server (FastAPI, pyproject.toml)
-│   │       └─── src/
-│   │           ├── .env.example
-│   │           ├── config.py
-│   │           ├── main.py
-│   │           ├── handlers/
-│   │           └── services/
+│   │       ├── .env.example
+│   │       ├── config.py
+│   │       ├── main.py
+│   │       ├── handlers/
+│   │       └── services/
 │   └── tests/
 │       ├── extension_server/
 │       └── passkey_server/
