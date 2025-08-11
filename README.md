@@ -265,12 +265,21 @@ webauthn-custom-extension/
 1️⃣ Install dependencies:
 
 ```bash
+# Install all dependencies
 task install
 ```
 
-2️⃣ Start all services:
+2️⃣ Set up environment variables:
 
 ```bash
+# Copy the env and modify as needed
+task env:setup
+```
+
+3️⃣ Start all services:
+
+```bash
+# Start all services
 task dev
 ```
 
@@ -278,7 +287,15 @@ task dev
 * Extension Server: [http://localhost:9000](http://localhost:9000)
 * Web Client: [http://localhost:5173](http://localhost:5173)
 
-3️⃣ Test using Chrome DevTools → WebAuthn Panel
+4️⃣ Test the flow:
+
+Open the web client in your browser and follow the registration and authentication steps.
+
+**Testing Tips:**
+Test using Chrome DevTools → WebAuthn Panel https://developer.chrome.com/docs/devtools/webauthn
+
+> Open Chrome DevTools, More Options (**⋮**) → More tools → WebAuthn to open the WebAuthn panel.
+> In the panel, `Enable virtual authenticator environment` -> Add an authenticator (Protocol: `CTAP2`, Transport: `USB`)
 
 ---
 
