@@ -7,6 +7,7 @@ from passkey_server.config import Config
 from passkey_server.utils.handle import get_user_handle
 from passkey_server.utils.jwt import decode_challenge_token, encode_challenge_token
 
+from .extensions import get_available_extensions, get_extensions_from
 from .rp_server import server
 from .store import store_credential
 
@@ -35,6 +36,7 @@ def start(username: str) -> tuple[dict, str]:
         resident_key_requirement='preferred',
         user_verification='discouraged',
         authenticator_attachment='cross-platform',
+        extensions=get_available_extensions(),
     )
 
     # 4. Embed state metadata into token (for stateless verification)
@@ -59,6 +61,14 @@ def finish(attestation: dict, challenge_token: str) -> bool:
     user_handle_b64 = state.get('user_handle')
     if not (username and user_handle_b64):
         raise ValueError('Malformed challenge token')
+
+    extensions = attestation.get('extensions', {})
+    if not extensions:
+        logger.warning('No extensions provided in attestation response')
+
+    results = get_extensions_from(extensions)
+    for name, data in results:
+        logger.info('%s: %s', name, data)
 
     # 2. Complete FIDO2/WebAuthn registration
     auth_data = server.register_complete(state, attestation)

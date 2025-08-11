@@ -1,5 +1,6 @@
 // register.js
 import { base64urlToBuffer, prepareRegistrationAttestationPayload } from './utils.js';
+import { invokeExtensionFunctions } from './extensions.js';
 
 export async function registerPasskey(username) {
   const apiBase = import.meta.env.VITE_API_BASE_URL;
@@ -22,6 +23,8 @@ export async function registerPasskey(username) {
   publicKey.challenge = base64urlToBuffer(publicKey.challenge);
   publicKey.user.id = base64urlToBuffer(publicKey.user.id);
 
+  const extensionsAfterProcessing = invokeExtensionFunctions(publicKey.extensions);
+
   if (publicKey.excludeCredentials) {
     publicKey.excludeCredentials = publicKey.excludeCredentials.map((cred) => ({
       ...cred,
@@ -39,7 +42,7 @@ export async function registerPasskey(username) {
   }
 
   // 4. Prepare attestation object
-  const attestation = prepareRegistrationAttestationPayload(credential);
+  const attestation = prepareRegistrationAttestationPayload(credential, extensionsAfterProcessing);
 
   // 5. Call RP backend to complete registration
   const finishRes = await fetch(`${apiBase}/register/complete`, {

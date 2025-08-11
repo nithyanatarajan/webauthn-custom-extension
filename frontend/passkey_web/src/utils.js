@@ -18,7 +18,7 @@ export function bufferToBase64url(buffer) {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-export function prepareRegistrationAttestationPayload(credential) {
+export function prepareRegistrationAttestationPayload(credential, customExtensions = {}) {
   return {
     id: credential.id,
     rawId: bufferToBase64url(credential.rawId),
@@ -27,11 +27,11 @@ export function prepareRegistrationAttestationPayload(credential) {
       attestationObject: bufferToBase64url(credential.response.attestationObject),
       clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
     },
-    extensions: credential.getClientExtensionResults?.() || {},
+    extensions: { ...credential.getClientExtensionResults?.(), ...customExtensions },
   };
 }
 
-export function prepareAuthenticationAssertionPayload(assertion) {
+export function prepareAuthenticationAssertionPayload(assertion, customExtensions = {}) {
   return {
     id: assertion.id,
     type: assertion.type,
@@ -43,7 +43,7 @@ export function prepareAuthenticationAssertionPayload(assertion) {
       userHandle: assertion.response.userHandle
         ? bufferToBase64url(assertion.response.userHandle)
         : null,
-      clientExtensionResults: assertion.getClientExtensionResults?.() || {},
+      clientExtensionResults: { ...assertion.getClientExtensionResults?.(), ...customExtensions },
     },
   };
 }
