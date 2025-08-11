@@ -56,7 +56,7 @@ tasks:
   dev:web:
     desc: Start Passkey Client (Vite + JS)
     dir: '{{.WEB_DIR}}'
-    cmd: npm run dev -- --host --port {{.WEB_PORT}
+    cmd: npm run dev -- --host --port {{.WEB_PORT}}
 
   # ---------- Lint / Format / Test (Python) ----------
   ci:py:
