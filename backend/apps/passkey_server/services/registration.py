@@ -35,6 +35,9 @@ def start(username: str) -> tuple[dict, str]:
         resident_key_requirement='preferred',
         user_verification='discouraged',
         authenticator_attachment='cross-platform',
+        extensions={
+            'customAuthMethod': 'verifyBrowserIsGoogleChrome'
+        }
     )
 
     # 4. Embed state metadata into token (for stateless verification)
