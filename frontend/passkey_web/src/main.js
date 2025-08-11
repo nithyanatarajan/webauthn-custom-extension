@@ -1,25 +1,59 @@
+import { registerPasskey } from './register.js';
+import { authenticateWithPasskey } from './auth.js';
+
 const UsernameSessionKey = 'username';
+
+// UI helpers
+const outputElement = document.querySelector('#output');
+const setOutput = (msg) => {
+  if (outputElement) outputElement.textContent = msg;
+};
+const getErrorMessage = (err) =>
+  `❌ Error: ${err?.response?.data?.detail || err.message || 'Unknown error'}`;
+
+// Generic async wrapper to reduce duplication
+async function runWithFeedback(action, successMessage, onSuccess) {
+  try {
+    const result = await action();
+    if (onSuccess) onSuccess(result);
+    setOutput(successMessage);
+  } catch (err) {
+    console.error(err);
+    setOutput(getErrorMessage(err));
+  }
+}
 
 export async function handleRegister(event) {
   event.preventDefault();
   const form = event.target;
   const username = form.username?.value.trim();
-  const output = document.querySelector('#output');
+
+  if (username) {
+    document.querySelectorAll('.username').forEach((el) => (el.value = username));
+  }
 
   if (!username) {
-    output.textContent = '⚠️ Username is required. Please enter a username.';
+    setOutput('⚠️ Username is required. Please enter a username.');
+    return;
   }
+
+  await runWithFeedback(
+    () => registerPasskey(username),
+    '✅ Registered successfully.',
+    () => sessionStorage.setItem(UsernameSessionKey, username),
+  );
 }
 
 export async function handleAuthenticate(event) {
   event.preventDefault();
-  const form = event.target;
-  const username = form.username?.value.trim() || sessionStorage.getItem(UsernameSessionKey);
-  const output = document.querySelector('#output');
+  const username = sessionStorage.getItem(UsernameSessionKey);
 
   if (!username) {
-    output.textContent = '⚠️ Username is required. Please register first.';
+    setOutput('⚠️ Username is required. Please register first.');
+    return;
   }
+
+  await runWithFeedback(() => authenticateWithPasskey(username), '✅ Authentication successful.');
 }
 
 const handlers = {
