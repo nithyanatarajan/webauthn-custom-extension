@@ -5,6 +5,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import Config
+from .logging_config import setup_logging
+
+# Ensure logging is configured even when imported (e.g., in tests)
+setup_logging()
 
 app = FastAPI()
 

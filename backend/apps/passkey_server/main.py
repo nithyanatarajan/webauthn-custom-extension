@@ -7,6 +7,7 @@ from starlette.responses import JSONResponse
 
 from .config import Config
 from .exceptions.handlers import register_exception_handlers
+from .logging_config import setup_logging
 from .models import (
     AuthBeginRequest,
     AuthCompleteRequest,
@@ -17,6 +18,9 @@ from .models import (
 )
 from .services.authentication import finish as auth_finish, start as auth_start
 from .services.registration import finish as reg_finish, start as reg_start
+
+# Ensure logging is configured even when imported (e.g., in tests)
+setup_logging()
 
 app = FastAPI()
 register_exception_handlers(app)
