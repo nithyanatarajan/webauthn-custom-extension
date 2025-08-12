@@ -10,52 +10,56 @@ participant "Custom Extension Server" as ExtServer
 group Passkey Registration
 User -> Browser: Triggers registration
 Browser -> RP: POST /register/begin { username }
-RP --> Browser: publicKeyCredentialCreationOptions containing customExtensions
+RP --> Browser: publicKeyCredentialCreationOptions containing extensions
 note over RP
-Returns publicKeyCredentialCreationOptions containing customExtensions
+Returns publicKeyCredentialCreationOptions containing extensions
 {
   "publicKey": {
-    ...
-    "customExtensions": {
-      "url": "http://localhost:9001/extensions/register",
-      "data": {
-          "ip": "optional",
-          "location": "optional",
-      }
+    ...,
+    "extensions": {
+      "customData": [
+        { "name": "extensionFunc1" },
+        { "name": "extensionFunc2" },
+        { "name": "extensionFunc3", "metadata": { ... } }
+      ]
     }
-  }
+  },
+  "challenge_token": <JWT>
 }
 end note
 
-group Custom Extension Registration
-Browser -> Browser: Reads `customExtensions` from RP response
-Browser -> Browser: Format data needed to pass to "Extension Server"
-Browser -> ExtServer: POST /extensions/register { username, data }
-ExtServer -> ExtServer: Verification and data extraction
-ExtServer --> Browser: { status }
+group Custom Extension Processing at Client Side
+Browser -> Browser: Read `extensions` from RP response
+Browser -> Browser: Act on `extensions` → build customExtensions
+  alt "If metadata says to call Extension Server"
+  Browser -> ExtServer: POST /extensions/{extension_path} { username, data }
+  ExtServer -> ExtServer: Verification, data extraction and storage
+  ExtServer --> Browser: { status }
+  end
 end
 
-Browser -> Browser: Prepare publicKey credential
-note right of Browser
-Invokes navigator.credentials.create() using publicKeyCredentialOptions
-end note
-
 Browser -> Auth: navigator.credentials.create(options)
-Auth -> Browser: Attestation response (clientDataJSON, attestationObject)
+Auth -> Browser: Attestation (clientDataJSON, attestationObject)
 note right of Browser
-Receives attestation data for submission to the RP server.
+Receive attestation to submit to RP.
 end note
 
-Browser -> RP: POST /registration/complete
+Browser -> Browser: Merge getClientExtensionResults() + customExtensions → payload.extensions
+
+Browser -> RP: POST /registration/complete { webauthn, extensions, challenge_token }
 note right of RP
-• Verifies attestation response
-• Binds credential to user
+• Verify attestation
+• Verify extensions (presence/shape/proofs)
+• Bind credential to user
 end note
 
 group Custom Extension Registration Verification
-RP -> ExtServer: POST /extensions/register/verify
-ExtServer -> ExtServer: Verification and data validation
-ExtServer --> RP: { status }
+RP -> RP: Check required extensions are present
+  alt "If metadata says to call Extension Server"
+  RP -> ExtServer: POST /extensions/{extension_path}/verify
+  ExtServer -> ExtServer: Verification and data validation
+  ExtServer --> RP: { status, valid }
+  end
 end
 
 RP --> Browser: { status }
@@ -64,46 +68,56 @@ end
 group Passkey Authentication
 User -> Browser: Triggers authentication
 Browser -> RP: POST /authenticate/begin { username }
-RP --> Browser: publicKeyCredentialCreationOptions containing customExtensions
+RP --> Browser: publicKeyCredentialRequestOptions containing extensions
 note over RP
-Returns publicKeyCredentialCreationOptions containing customExtensions
+Returns publicKeyCredentialRequestOptions containing extensions
 {
   "publicKey": {
-    ...
-    "customExtensions": {
-      "url": "http://localhost:9001/extensions/authenticate",
-      "data": {
-          "ip": "required",
-          "location": "required",
-          "device": "optional",
-      }
+    ...,
+    "extensions": {
+      "customData": [
+        { "name": "extensionFunc1" },
+        { "name": "extensionFunc2" },
+        { "name": "extensionFunc3", "metadata": { ... } }
+      ]
     }
-  }
+  },
+  "challenge_token": <JWT>
 }
 end note
 
-group Custom Extension Authentication
-Browser -> Browser: Reads `customExtensions` from RP response
-Browser -> Browser: Format data needed to pass to "Extension Server"
-Browser -> ExtServer: POST /extensions/authenticate { username, data }
-ExtServer -> ExtServer: Verification and data extraction
-ExtServer --> Browser: { status }
+group Custom Extension Processing at Client Side
+Browser -> Browser: Read `extensions` from RP response
+Browser -> Browser: Act on `extensions` → build customExtensions
+  alt "If metadata says to call Extension Server"
+  Browser -> ExtServer: POST /extensions/{extension_path} { username, data }
+  ExtServer -> ExtServer: Verification, data extraction and storage
+  ExtServer --> Browser: { status }
+  end
 end
-
 
 Browser -> Auth: navigator.credentials.get(options)
 Auth -> Browser: Assertion (authenticatorData, clientDataJSON, signature)
+note right of Browser
+Receive assertion to submit to RP.
+end note
 
-Browser -> RP: POST /authentication/complete
+Browser -> Browser: Merge getClientExtensionResults() + customExtensions → payload.extensions
+
+Browser -> RP: POST /authentication/complete { webauthn, extensions, challenge_token }
 note right of RP
-• Verifies assertion
-• Issues session
+• Verify assertion
+• Verify extensions (presence/shape/proofs)
+• Issue session
 end note
 
 group Custom Extension Authentication Verification
-RP -> ExtServer: POST /extensions/authenticate/verify
-ExtServer -> ExtServer: Verification and data validation
-ExtServer --> RP: { status }
+RP -> RP: Check required extensions are present
+  alt "If metadata says to call Extension Server"
+  RP -> ExtServer: POST /extensions/{extension_path}/verify
+  ExtServer -> ExtServer: Verification and data validation
+  ExtServer --> RP: { status, valid }
+  end
 end
 
 RP --> Browser: { status }

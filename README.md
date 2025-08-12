@@ -4,38 +4,36 @@
 ![CI for Frontend Services](https://github.com/nithyanatarajan/webauthn-custom-extension/actions/workflows/frontend.yml/badge.svg)
 
 This proof-of-concept demonstrates a **standards-compliant** passkey-based authentication flow using **FIDO2/WebAuthn**,
-integrated with a **server-triggered custom extension server** to collect additional client-side data as part of the
-registration and authentication ceremonies.
+integrated with a **Custom Extension Server**.
+The RP (Relying Party) can instruct the client to run **custom extension logic** during registration or authentication,
+optionally calling the Extension Server based on provided metadata.
 
-The **custom extension step** is initiated by the **Relying Party (RP) server** during `/register/begin` or
-`/authenticate/begin` and includes:
-
-* The **URL** of the custom extension server
-* The **required data fields** to collect
-
-The browser calls this extension server **before** invoking `navigator.credentials.create()` or
-`navigator.credentials.get()`.
-If the extension step fails, the WebAuthn flow is aborted.
-On `/complete`, the RP verifies with the extension server before finalizing the ceremony.
+The client merges **WebAuthn’s `getClientExtensionResults()`** with any additional **custom extension data** into the
+payload sent to the RP.
+The RP verifies WebAuthn responses and may delegate extension verification to the Extension Server.
 
 ---
 
 ## ✅ Key Features
 
-* Standards-compliant WebAuthn flows for registration and authentication
-* **Server-driven custom extension** for analytics or business validation
-* Stateless challenge handling with signed payloads
-* Clear separation between authentication logic (RP) and business logic (Extension Server)
-* Works with real or virtual authenticators in modern browsers
+* Standards-compliant WebAuthn flows for registration and authentication.
+* **Server-driven custom extensions** with optional Extension Server calls based on metadata.
+* Stateless challenge handling with signed `challenge_token`.
+* Clear separation between authentication logic (RP) and business/analytics logic (Extension Server).
+* Works with real or virtual authenticators in modern browsers.
 
 ---
 
 ## 🧩 Architectural Principles
 
-* **Server-Driven**: RP embeds extension details (URL + required fields) in `/begin` responses
-* **Stateless**: No backend sessions — validation is based on signed challenges or tokens
-* **Isolated Concerns**: RP verifies WebAuthn responses; extension server validates custom data
-* **FIDO2/WebAuthn Compliance**: No misuse of `extensions` API — data exchange is handled outside WebAuthn
+* **Server-Driven**: RP includes `extensions.customData[]` in `/begin` responses, with optional `metadata` for each
+  extension.
+* **Conditional Extension Server Calls**: The client only calls the Extension Server if `metadata` indicates a server
+  interaction is required.
+* **Stateless**: No backend sessions — validation is bound to short-lived signed `challenge_token`.
+* **Isolated Concerns**: RP verifies WebAuthn responses; Extension Server verifies extension proofs.
+* **FIDO2/WebAuthn Compliance**: Uses `extensions` in the publicKey options and merges client+custom data before sending
+  to RP.
 
 ---
 
@@ -43,160 +41,112 @@ On `/complete`, the RP verifies with the extension server before finalizing the 
 
 ### 1. `passkey_web` (Web Client)
 
-* Calls `/register/begin` or `/authenticate/begin` on RP
-* Reads extension metadata (`url`, `data`) from RP’s response
-* Calls the extension server before invoking WebAuthn API
-* Aborts ceremony if extension call fails
-* Sends attestation/assertion to RP on success
+* Calls `/register/begin` or `/authenticate/begin` on RP.
+* Reads `extensions.customData[]` from RP’s response.
+* Optionally calls Extension Server(s) if `metadata` requires it.
+* Invokes `navigator.credentials.create()` or `navigator.credentials.get()`.
+* Merges `getClientExtensionResults()` with custom extension data into `extensions` field before sending to RP.
 
 ### 2. `passkey_server` (Relying Party)
 
-* Generates WebAuthn `publicKeyCredentialOptions` for registration/authentication
-* Embeds extension instructions in these options
-* Verifies attestation/assertion responses
-* Confirms with extension server during `/complete`
+* Generates WebAuthn `publicKeyCredentialCreationOptions` or `publicKeyCredentialRequestOptions`.
+* Embeds `extensions.customData[]` in these options, along with `challenge_token`.
+* Verifies attestation/assertion responses.
+* Verifies extension data (either locally or via Extension Server `/verify`).
 
 ### 3. `extension_server` (Custom Extension Server)
 
-* Receives client-submitted data before WebAuthn ceremony
-* Validates fields against business rules
-* Optionally issues signed challenges for further verification
-* Responds to RP verification callbacks
+* Handles client-submitted extension data before WebAuthn call.
+* Issues optional signed proofs binding data to `challenge_token`.
+* Responds to RP verification callbacks.
 
 ---
 
 ## 🧾 Flow Summary
 
-### Registration
-
-1. Client → RP: `/register/begin` with username
-2. RP → Client: WebAuthn options + extension instructions (`url`, `data`)
-3. Client → Extension Server: POST required data to `/extensions/register`
-4. Extension Server → Client: success/fail
-5. If success → Client calls `navigator.credentials.create()`
-6. Client → RP: `/register/complete` with attestation
-7. RP → Extension Server: `/extensions/register/verify` to confirm data
-8. RP verifies attestation and extension verification before success
-
-### Authentication
-
-1. Client → RP: `/authenticate/begin` with username
-2. RP → Client: WebAuthn options + extension instructions (`url`, `data`)
-3. Client → Extension Server: POST required data to `/extensions/authenticate`
-4. Extension Server → Client: success/fail
-5. If success → Client calls `navigator.credentials.get()`
-6. Client → RP: `/authenticate/complete` with assertion
-7. RP → Extension Server: `/extensions/authenticate/verify` to confirm data
-8. RP verifies assertion and extension verification before success
-
----
-
-## 📜 Detailed User Flow
+![sequence.png](diagrams/sequence.png)
 
 ### Registration
 
-1. **Client → RP**: `POST /register/begin`
-   **Body:** `{ "username": "<email>" }`
-
-2. **RP → Client**: WebAuthn options **+** `customExtensions`
-
-   ```json
-   {
-     "publicKey": {
-       "...": "...",
-       "customExtensions": {
-         "url": "https://localhost:9001/extensions/register",
-         "data": {
-           "ip": "optional",
-           "location": "optional"
-         }
-       }
-     }
-   }
-   ```
-
-3. **Client → Extension Server**: `POST /extensions/register`
-   **Body (example):**
-
-   ```json
-   {
-     "username": "<email>",
-     "data": {
-       "ip": "<client-ip-or-derived>",
-       "location": "<geo-or-browser-hint>"
-     }
-   }
-   ```
-
-4. **Extension Server → Client**: success/fail
-   **Response (example):** `{ "status": "ok" }` or `{ "status": "error", "reason": "..." }`
-
-5. **If success** → **Client** calls `navigator.credentials.create({ publicKey })`
-
-6. **Client → RP**: `POST /register/complete`
-   **Body:** `{ "username": "<email>", "credential": { ...attestation payload... } }`
-
-7. **RP → Extension Server**: `POST /extensions/register/verify`
-   **Body (example):**
-
-   ```json
-   { "username": "<email>" }
-   ```
-
-   **Extension Server → RP:** `{ "status": "ok" }`
-   **RP:** verify attestation **and** extension check → success.
-
----
+1. **Client → RP**: `POST /register/begin { username }`
+2. **RP → Client**: WebAuthn creation options with `extensions.customData[]` + `challenge_token`.
+3. **Client**: Reads extensions; calls Extension Server(s) if `metadata` says so.
+4. **Client → Authenticator**: Calls `navigator.credentials.create(options)`.
+5. **Client**: Merges `getClientExtensionResults()` + custom extension data → `extensions` field.
+6. **Client → RP**: `POST /registration/complete { webauthn, extensions, challenge_token }`.
+7. **RP**: Verifies WebAuthn and extensions (local or via `/verify`).
+8. **RP → Client**: `{ status }`.
 
 ### Authentication
 
-1. **Client → RP**: `POST /authenticate/begin`
-   **Body:** `{ "username": "<email>" }`
+1. **Client → RP**: `POST /authenticate/begin { username }`
+2. **RP → Client**: WebAuthn request options with `extensions.customData[]` + `challenge_token`.
+3. **Client**: Reads extensions; calls Extension Server(s) if `metadata` says so.
+4. **Client → Authenticator**: Calls `navigator.credentials.get(options)`.
+5. **Client**: Merges `getClientExtensionResults()` + custom extension data → `extensions` field.
+6. **Client → RP**: `POST /authentication/complete { webauthn, extensions, challenge_token }`.
+7. **RP**: Verifies WebAuthn and extensions (local or via `/verify`).
+8. **RP → Client**: `{ status }`.
 
-2. **RP → Client**: WebAuthn options **+** `customExtensions`
+---
 
-   ```json
-   {
-     "publicKey": {
-       "...": "...",
-       "customExtensions": {
-         "url": "https://localhost:9001/extensions/authenticate",
-         "data": {
-           "ip": "required",
-           "location": "required",
-           "device": "optional"
-         }
-       }
-     }
-   }
-   ```
+## 📜 Example `/begin` Response
 
-3. **Client → Extension Server**: `POST /extensions/authenticate`
-   **Body (example):**
+```json
+{
+  "publicKey": {
+    "...": "...",
+    "extensions": {
+      "customData": [
+        {
+          "name": "extensionFunc1"
+        },
+        {
+          "name": "extensionFunc2"
+        },
+        {
+          "name": "extensionFunc3",
+          "metadata": {
+            ...
+          }
+        }
+      ]
+    }
+  },
+  "challenge_token": "<JWT>"
+}
+```
 
-   ```json
-   {
-     "username": "<email>",
-     "data": {
-       "ip": "<client-ip-or-derived>",
-       "location": "<geo-or-browser-hint>",
-       "device": "<ua-or-hardware-hint>"
-     }
-   }
-   ```
+---
 
-4. **Extension Server → Client**: success/fail
-   **Response:** `{ "status": "ok" }` or error
+## 📜 Example `/complete` Payload
 
-5. **If success** → **Client** calls `navigator.credentials.get({ publicKey })`
-
-6. **Client → RP**: `POST /authenticate/complete`
-   **Body:** `{ "username": "<email>", "credential": { ...assertion payload... } }`
-
-7. **RP → Extension Server**: `POST /extensions/authenticate/verify`
-   **Body:** `{ "username": "<email>" }`
-   **Extension Server → RP:** `{ "status": "ok" }`
-   **RP:** verify assertion **and** extension check → success.
+```json
+{
+  "webauthn": {
+    "id": "...",
+    "rawId": "...",
+    "response": {
+      ...
+    },
+    "type": "public-key"
+  },
+  "extensions": {
+    "customData": [
+      {
+        "name": "extensionFunc1"
+      },
+      {
+        "name": "extensionFunc3",
+        "metadata": {
+          ...
+        }
+      }
+    ]
+  },
+  "challenge_token": "<JWT>"
+}
+```
 
 ---
 
@@ -236,6 +186,7 @@ webauthn-custom-extension/
 │       ├── package-lock.json
 │       ├── setupTests.js
 │       ├── style.css
+│       ├── vite.config.js
 │       └── vitest.config.js
 │
 ├── diagrams/                      # sequence.puml, architecture.puml, etc.
