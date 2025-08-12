@@ -1,5 +1,8 @@
 import { registerPasskey } from './register.js';
 import { authenticateWithPasskey } from './auth.js';
+import { initDevLogger, devLog } from './devLogger.js';
+
+devLog('info', 'App started');
 
 const UsernameSessionKey = 'username';
 
@@ -11,14 +14,20 @@ const setOutput = (msg) => {
 const getErrorMessage = (err) =>
   `❌ Error: ${err?.response?.data?.detail || err.message || 'Unknown error'}`;
 
+initDevLogger();
+
 // Generic async wrapper to reduce duplication
 async function runWithFeedback(action, successMessage, onSuccess) {
   try {
     const result = await action();
-    if (onSuccess) onSuccess(result);
+    if (onSuccess) {
+      devLog('info', 'Operation succeeded:', result);
+      onSuccess(result);
+    }
     setOutput(successMessage);
   } catch (err) {
     console.error(err);
+    devLog('error', 'Operation failed:', err);
     setOutput(getErrorMessage(err));
   }
 }
@@ -36,6 +45,7 @@ export async function handleRegister(event) {
     setOutput('⚠️ Username is required. Please enter a username.');
     return;
   }
+  devLog('info', 'Calling registration with username:', username);
 
   await runWithFeedback(
     () => registerPasskey(username),
@@ -52,6 +62,8 @@ export async function handleAuthenticate(event) {
     setOutput('⚠️ Username is required. Please register first.');
     return;
   }
+
+  devLog('info', 'Calling authentication with username:', username);
 
   await runWithFeedback(() => authenticateWithPasskey(username), '✅ Authentication successful.');
 }
