@@ -5,9 +5,9 @@ import uvicorn
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from shared_utils.logging_config import setup_logging
 
 from .config import Config
-from .logging_config import setup_logging
 
 # Ensure logging is configured even when imported (e.g., in tests)
 setup_logging()

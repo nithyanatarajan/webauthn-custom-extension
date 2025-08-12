@@ -2,11 +2,11 @@ import uvicorn
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from shared_utils.logging_config import setup_logging
 from starlette.responses import JSONResponse
 
 from .config import Config
 from .exceptions.handlers import register_exception_handlers
-from .logging_config import setup_logging
 from .models import (
     AuthBeginRequest,
     AuthCompleteRequest,

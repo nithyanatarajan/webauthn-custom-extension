@@ -26,7 +26,7 @@ def setup_logging(force: bool = False, level: int | None = None) -> None:
         root_logger.setLevel(level)
         return
 
-    log_format = '%(asctime)s %(levelname)s [%(name)s] => %(message)s'
+    log_format = '%(asctime)s %(levelname)s [[SERVER]] [%(name)s] => %(message)s'
     datefmt = '%Y-%m-%d %H:%M:%S'
 
     logging.basicConfig(level=level, format=log_format, datefmt=datefmt)
