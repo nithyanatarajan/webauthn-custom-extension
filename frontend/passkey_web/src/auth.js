@@ -1,21 +1,9 @@
 import { base64urlToBuffer, prepareAuthenticationAssertionPayload } from './utils.js';
+import { beginAuthentication, completeAuthentication } from './api/auth.js';
 
 export async function authenticateWithPasskey(username) {
-  const apiBase = import.meta.env.VITE_API_BASE_URL;
-
   // 1. Begin authentication
-  const res = await fetch(`${apiBase}/authenticate/begin`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username }),
-  });
-
-  if (!res.ok) {
-    const { detail } = await res.json();
-    throw new Error(`Authentication begin failed: ${detail}`);
-  }
-
-  const { publicKey, challenge_token } = await res.json();
+  const { publicKey, challenge_token } = await beginAuthentication(username);
 
   // 2. Convert to ArrayBuffers
   publicKey.challenge = base64urlToBuffer(publicKey.challenge);
@@ -38,16 +26,6 @@ export async function authenticateWithPasskey(username) {
   // 4. Prepare and send final assertion
   const assertionPayload = prepareAuthenticationAssertionPayload(assertion);
 
-  const finalRes = await fetch(`${apiBase}/authenticate/complete`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ assertion: assertionPayload, challenge_token }),
-  });
-
-  if (!finalRes.ok) {
-    const { detail } = await finalRes.json();
-    throw new Error(`Authentication complete failed: ${detail}`);
-  }
-
-  return await finalRes.json();
+  const result = await completeAuthentication({ assertion: assertionPayload, challenge_token });
+  return result;
 }
