@@ -25,3 +25,8 @@ class Config:
 
     USER_KEY = 'user'
     ACCOUNT_ID_KEY = 'account_id'
+
+    # Extension validation URL
+    EXT_SERVER_URL = os.getenv('EXTENSION_VALIDATION_URL', 'http://localhost:9000')
+    EXT_SERVER_TIMEOUT = 2  # seconds
+    EXT_MAX_RETRIES = 3
