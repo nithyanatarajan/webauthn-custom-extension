@@ -1,4 +1,6 @@
 # extension_server.py
+import logging
+
 import uvicorn
 
 from fastapi import FastAPI
@@ -9,6 +11,7 @@ from .logging_config import setup_logging
 
 # Ensure logging is configured even when imported (e.g., in tests)
 setup_logging()
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -23,12 +26,14 @@ async def health():
 @app.post('/extensions/something')
 async def save_something():
     # Simulate some async operation
+    logger.info('saving received data into a store')
     return {'status': 'ok'}
 
 
 @app.post('/extensions/something/verify')
 async def verify_something():
     # Check if data is received correctly
+    logger.info('verifying that received data is stored correctly')
     return {'status': 'ok'}
 
 

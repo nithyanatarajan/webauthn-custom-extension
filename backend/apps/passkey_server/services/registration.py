@@ -23,13 +23,17 @@ def start(username: str) -> tuple[dict, str]:
         - publicKeyCredentialCreationOptions (dict)
         - challenge_token (JWT-encoded state)
     """
+    logger.info('REGISTRATION START for %s', username)
+
     # 1. Generate user handle (should be stable across logins)
     user_handle = get_user_handle(username)
+    logger.debug('Generated user_handle length=%d for username=%s', len(user_handle or b''), username)
 
     # 2. Create user entity
     user = PublicKeyCredentialUserEntity(id=user_handle, name=username, display_name=username)
 
     # 3. Begin registration ceremony
+    logger.debug('Calling server.register_begin with extensions')
     options, state = server.register_begin(
         user=user,
         credentials=[],
@@ -38,6 +42,7 @@ def start(username: str) -> tuple[dict, str]:
         authenticator_attachment='cross-platform',
         extensions=get_available_extensions(),
     )
+    logger.debug('register_begin succeeded for username=%s', username)
 
     # 4. Embed state metadata into token (for stateless verification)
     state['username'] = username
@@ -55,12 +60,16 @@ def finish(attestation: dict, challenge_token: str) -> bool:
     Saves credential to in-memory store on success.
     """
 
+    logger.debug('REGISTRATION FINISH invoked')
+
     # 1. Decode and validate challenge token (issued during /register/begin)
     state = decode_challenge_token(challenge_token)
     username = state.get('username')
     user_handle_b64 = state.get('user_handle')
     if not (username and user_handle_b64):
+        logger.error('Malformed challenge token: username or user_handle missing')
         raise ValueError('Malformed challenge token')
+    logger.info('Decoded challenge token for username=%s', username)
 
     extensions = attestation.get('extensions', {})
     if not extensions:
@@ -72,12 +81,15 @@ def finish(attestation: dict, challenge_token: str) -> bool:
         validate_extensions(extensions)
 
     # 2. Complete FIDO2/WebAuthn registration
+    logger.debug('Calling server.register_complete for user=%s', username)
     auth_data = server.register_complete(state, attestation)
+    logger.debug('register_complete succeeded for user=%s', username)
 
     # 3. Decode user handle from base64
     try:
         user_handle = base64.urlsafe_b64decode(user_handle_b64.encode('utf-8'))
     except Exception as e:
+        logger.error('Invalid user handle encoding for user=%s', username)
         raise ValueError('Invalid user handle encoding') from e
 
     # 6. Store credential in in-memory DB
@@ -90,6 +102,7 @@ def finish(attestation: dict, challenge_token: str) -> bool:
         rp_id=Config.RP_ID,
         credential_data=auth_data.credential_data,
     )
+    logger.info('Stored credential for user=%s (rp_id=%s)', username, Config.RP_ID)
 
     logger.info('REGISTRATION SUCCESS for %s', username)
     return True

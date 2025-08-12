@@ -1,8 +1,7 @@
 import uvicorn
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from starlette.responses import JSONResponse
 
 from .config import Config
@@ -27,22 +26,10 @@ register_exception_handlers(app)
 
 app.add_middleware(CORSMiddleware, allow_origins=Config.ALLOWED_ORIGINS, allow_methods=['*'], allow_headers=['*'])
 
-# Security scheme for bearer token
-security = HTTPBearer(auto_error=True)
-
 
 @app.get('/health')
 async def health():
     return {'status': 'ok'}
-
-
-# Dependency to verify bearer token is not empty
-def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    if not credentials.credentials:
-        raise HTTPException(
-            status_code=401, detail='Missing bearer token: Authorization header provided but token is empty'
-        )
-    return credentials.credentials
 
 
 @app.post('/register/begin', response_model=BeginResponse)

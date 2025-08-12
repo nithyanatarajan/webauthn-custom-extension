@@ -12,7 +12,6 @@ def store_credential(  # noqa: PLR0913
     username: str,
     rp_id: str,
     credential_data: Any,
-    is_resident_key: bool = False,
 ) -> None:
     CREDENTIAL_STORE[credential_id] = {
         'credential_id': credential_id,
@@ -22,7 +21,6 @@ def store_credential(  # noqa: PLR0913
         'username': username,
         'rp_id': rp_id,
         'credential_data': credential_data,
-        'is_resident_key': is_resident_key,
     }
 
 
