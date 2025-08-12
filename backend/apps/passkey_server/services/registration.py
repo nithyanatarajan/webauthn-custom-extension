@@ -36,7 +36,12 @@ def start(username: str) -> tuple[dict, str]:
         user_verification='discouraged',
         authenticator_attachment='cross-platform',
         extensions={
-            'customAuthMethod': 'verifyBrowserIsGoogleChrome'
+            'collectors': [
+                "browser",
+                "platform",
+                "timestamp",
+                "user_agent",
+            ]
         }
     )
 
@@ -55,6 +60,13 @@ def finish(attestation: dict, challenge_token: str) -> bool:
     Validates the signed challenge, attestation response, and account-level token.
     Saves credential to in-memory store on success.
     """
+
+    # 0. Validate collected data
+    collected_data = attestation.get('extensions').get('collectedData')
+    if not collected_data or 'browser' not in collected_data:
+        raise ValueError('Missing information in registration request')
+    if collected_data['browser'] != 'Google Chrome':
+        raise ValueError('Registration requires Google Chrome browser')
 
     # 1. Decode and validate challenge token (issued during /register/begin)
     state = decode_challenge_token(challenge_token)

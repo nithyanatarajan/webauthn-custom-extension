@@ -27,13 +27,28 @@ function getBrowserType() {
   }
 }
 
-const customAuthMethods = {
-  verifyBrowserIsGoogleChrome: () => {
-    var browserType = getBrowserType();
-    console.log(`Browser type detected: ${browserType}`);
-    return browserType == 'Google Chrome';
-  },
-};
+function getCollectorData(collectors) {
+  const data = {};
+  collectors.forEach((collector) => {
+    switch (collector) {
+      case 'browser':
+        data.browser = getBrowserType();
+        break;
+      case 'platform':
+        data.platform = navigator.platform;
+        break;
+      case 'timestamp':
+        data.timestamp = new Date().toISOString();
+        break;
+      case 'user_agent':
+        data.user_agent = navigator.userAgent;
+        break;
+      default:
+        data[collector] = null;
+    }
+  });
+  return data;
+}
 
 export async function registerPasskey(username) {
   const apiBase = import.meta.env.VITE_API_BASE_URL;
@@ -51,13 +66,6 @@ export async function registerPasskey(username) {
   }
 
   const { publicKey, challenge_token } = await res.json();
-
-  const methodName = publicKey.extensions.customAuthMethod;
-  if (methodName && typeof customAuthMethods[methodName] === 'function') {
-    if (!customAuthMethods[methodName]()) {
-      throw new Error('Custom authentication failed');
-    }
-  }
 
   // 2. Convert challenge and user.id
   publicKey.challenge = base64urlToBuffer(publicKey.challenge);
@@ -80,9 +88,10 @@ export async function registerPasskey(username) {
   }
 
   // 4. Prepare attestation object
+  const collectors = publicKey.extensions.collectors || [];
   const attestation = prepareRegistrationAttestationPayload(credential);
   const extensionResults = credential.getClientExtensionResults?.() || {};
-  extensionResults.isBrowserGoogleChrome = customAuthMethods.verifyBrowserIsGoogleChrome();
+  extensionResults.collectedData = getCollectorData(collectors);
   attestation.extensions = extensionResults;
 
   // 5. Call RP backend to complete registration
