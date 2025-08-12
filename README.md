@@ -1,16 +1,14 @@
-# 🛡️ FIDO2 + WebAuthn Passkeys with Server-Triggered Custom Extension Server (POC)
+# 🛡️ FIDO2 + WebAuthn Passkeys with Custom Extensions (POC)
 
 ![CI for Backend Services](https://github.com/nithyanatarajan/webauthn-custom-extension/actions/workflows/backend.yml/badge.svg)
 ![CI for Frontend Services](https://github.com/nithyanatarajan/webauthn-custom-extension/actions/workflows/frontend.yml/badge.svg)
 
-This proof-of-concept demonstrates a **standards-compliant** passkey-based authentication flow using **FIDO2/WebAuthn**,
-integrated with a **Custom Extension Server**.
+This proof-of-concept demonstrates a passkey-based authentication flow using **FIDO2/WebAuthn** with **custom extensions**.
 The RP (Relying Party) can instruct the client to run **custom extension logic** during registration or authentication,
 optionally calling the Extension Server based on provided metadata.
 
 The client merges **WebAuthn’s `getClientExtensionResults()`** with any additional **custom extension data** into the
-payload sent to the RP.
-The RP verifies WebAuthn responses and may delegate extension verification to the Extension Server.
+payload sent to the RP. The RP verifies WebAuthn responses and may delegate extension verification to the Extension Server.
 
 ---
 
@@ -90,7 +88,9 @@ The RP verifies WebAuthn responses and may delegate extension verification to th
 
 ---
 
-## 📜 Example `/begin` Response
+## Example Payload
+
+### 📜 Example `/begin` Response
 
 ```json
 {
@@ -117,32 +117,29 @@ The RP verifies WebAuthn responses and may delegate extension verification to th
 }
 ```
 
----
-
-## 📜 Example `/complete` Payload
+### 📜 Example `/complete` Payload
 
 ```json
 {
-  "webauthn": {
+  "attestation": {
     "id": "...",
     "rawId": "...",
+    "type": "public-key",
     "response": {
-      ...
+      "attestationObject": "...",
+      "clientDataJSON": "...",
     },
-    "type": "public-key"
-  },
-  "extensions": {
-    "customData": [
-      {
-        "name": "extensionFunc1"
-      },
-      {
-        "name": "extensionFunc3",
-        "metadata": {
-          ...
-        }
-      }
-    ]
+    "extensions": {
+      "customData": [
+        {
+          "name": "extensionFunc1", "value": {...}
+        },
+        {
+          "name": "extensionFunc1", "value": {...}
+        },
+        { "name": "extensionFunc3", "value": {} }
+      ]
+    }
   },
   "challenge_token": "<JWT>"
 }
@@ -162,14 +159,14 @@ webauthn-custom-extension/
 │   │   │   ├── .env.example
 │   │   │   ├── config.py
 │   │   │   ├── main.py
-│   │   │   ├── handlers/
 │   │   │   └── services/
-│   │   └── passkey_server/            # RP server (FastAPI, pyproject.toml)
-│   │       ├── .env.example
-│   │       ├── config.py
-│   │       ├── main.py
-│   │       ├── handlers/
-│   │       └── services/
+│   │   ├── passkey_server/            # RP server (FastAPI, pyproject.toml)
+│   │   │   ├── .env.example
+│   │   │   ├── config.py
+│   │   │   ├── main.py
+│   │   │   └── services/
+│   │   └── shared_utils/             # Utils
+│   │       └── logging_config.py
 │   └── tests/
 │       ├── extension_server/
 │       └── passkey_server/
@@ -190,10 +187,6 @@ webauthn-custom-extension/
 │       └── vitest.config.js
 │
 ├── diagrams/                      # sequence.puml, architecture.puml, etc.
-│
-├── docs/                          # Overview.md, API.md, etc.
-│
-├── scripts/                       # Local dev scripts (start-all.sh, lint-all.sh, etc.)
 │
 ├── .github/                       # GitHub Actions workflows
 │   └── workflows/
@@ -247,14 +240,6 @@ Test using Chrome DevTools → WebAuthn Panel https://developer.chrome.com/docs/
 
 > Open Chrome DevTools, More Options (**⋮**) → More tools → WebAuthn to open the WebAuthn panel.
 > In the panel, `Enable virtual authenticator environment` -> Add an authenticator (Protocol: `CTAP2`, Transport: `USB`)
-
----
-
-## ⚠️ Limitations
-
-* Extension step is mandatory; failure aborts the ceremony
-* No persistent storage — in-memory only (POC)
-* Works only in browsers with native WebAuthn support
 
 ---
 
