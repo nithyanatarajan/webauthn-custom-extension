@@ -15,6 +15,7 @@ const getDeviceInfo = () => ({
   screen: { width: screen.width, height: screen.height },
 });
 
+//  This is a call to extension server when there is a destination given as EXTN. This is a sample implementation
 const someOtherExtension = async (metadata) => {
   if (metadata.destination && metadata.destination === 'EXTN' && metadata.path) {
     const path = `extensions/${metadata.path}`;
@@ -37,6 +38,7 @@ const functionRegistry = Object.freeze({
 // Returns undefined if key does not exist
 const executeFunctionByKey = (key, ...args) => functionRegistry[key?.trim()]?.(...args);
 
+// invokeExtensionFunctions is used to invoke extension functions registered in the functionRegistry.
 export const invokeExtensionFunctions = ({ customData = [] }) => {
   if (!Array.isArray(customData) || customData.length === 0) {
     return { customData: [] };
