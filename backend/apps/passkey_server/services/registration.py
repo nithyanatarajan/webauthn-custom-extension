@@ -7,7 +7,7 @@ from passkey_server.config import Config
 from passkey_server.utils.handle import get_user_handle
 from passkey_server.utils.jwt import decode_challenge_token, encode_challenge_token
 
-from .extensions import get_available_extensions, get_extensions_from
+from .extensions import get_available_extensions, get_extensions_from, validate_extensions
 from .rp_server import server
 from .store import store_credential
 
@@ -65,10 +65,11 @@ def finish(attestation: dict, challenge_token: str) -> bool:
     extensions = attestation.get('extensions', {})
     if not extensions:
         logger.warning('No extensions provided in attestation response')
-
-    results = get_extensions_from(extensions)
-    for name, data in results:
-        logger.info('%s: %s', name, data)
+    else:
+        results = get_extensions_from(extensions)
+        for name, data in results:
+            logger.info('%s: %s', name, data)
+        validate_extensions(extensions)
 
     # 2. Complete FIDO2/WebAuthn registration
     auth_data = server.register_complete(state, attestation)

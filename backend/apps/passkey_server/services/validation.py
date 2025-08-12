@@ -1,5 +1,5 @@
 # ext_utils.py
-
+import logging
 import time
 
 import httpx
@@ -11,10 +11,12 @@ from passkey_server.exceptions.errors import ExtensionValidationError
 
 
 def verify_extension_with_retries(extension_path: str):
+    url = f'{Config.EXT_SERVER_URL}/extensions/{extension_path}/verify'
+    logging.info(f'Verifying {url}')
     for attempt in range(Config.EXT_MAX_RETRIES):
         try:
             response = httpx.post(
-                f'{Config.EXT_SERVER_URL}/{extension_path}/verify',
+                url,
                 timeout=Config.EXT_SERVER_TIMEOUT,
             )
 
