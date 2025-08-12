@@ -60,9 +60,13 @@ payload sent to the RP. The RP verifies WebAuthn responses and may delegate exte
 
 ---
 
-## 🧾 Flow Summary
+## 🧾 Sequence Diagram
 
 ![sequence.png](diagrams/sequence.png)
+
+---
+
+## 🧾 Flow Summary
 
 ### Registration
 
