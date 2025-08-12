@@ -1,5 +1,9 @@
 _custom_data_key = 'customData'
-_extension_functions = [{'name': 'timeInfo'}, {'name': 'deviceInfo'}]
+_extension_functions = [
+    {'name': 'timeInfo'},
+    {'name': 'deviceInfo'},
+    {'name': 'someOtherExtension', 'metadata': {'destination': 'EXTN', 'path': 'something'}},
+]
 
 
 def get_available_extensions():

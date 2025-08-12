@@ -20,5 +20,17 @@ async def health():
     return {'status': 'ok'}
 
 
+@app.post('/extensions/something')
+async def save_something():
+    # Simulate some async operation
+    return {'status': 'ok'}
+
+
+@app.post('/extensions/something/verify')
+async def verify_something():
+    # Check if data is received correctly
+    return {'status': 'ok'}
+
+
 if __name__ == '__main__':
     uvicorn.run(app, port=9000, log_level='info')
