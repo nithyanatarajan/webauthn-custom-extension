@@ -11,8 +11,6 @@ export async function registerPasskey(username) {
   publicKey.challenge = base64urlToBuffer(publicKey.challenge);
   publicKey.user.id = base64urlToBuffer(publicKey.user.id);
 
-  const extensionsAfterProcessing = invokeExtensionFunctions(publicKey.extensions);
-
   if (publicKey.excludeCredentials) {
     publicKey.excludeCredentials = publicKey.excludeCredentials.map((cred) => ({
       ...cred,
@@ -20,7 +18,10 @@ export async function registerPasskey(username) {
     }));
   }
 
-  // 3. Call WebAuthn API
+  // 3. Process extensions
+  const extensionsAfterProcessing = invokeExtensionFunctions(publicKey.extensions);
+
+  // 4. Call WebAuthn API
   const credential = await navigator.credentials.create({
     publicKey: publicKey,
   });
@@ -29,10 +30,9 @@ export async function registerPasskey(username) {
     throw new Error('Credential creation failed or was cancelled.');
   }
 
-  // 4. Prepare attestation object
+  // 5. Prepare attestation object
   const attestation = prepareRegistrationAttestationPayload(credential, extensionsAfterProcessing);
 
-  // 5. Call RP backend to complete registration
-  const result = await completeRegistration({ attestation, challenge_token });
-  return result; // if needed
+  // 6. Call RP backend to complete registration
+  return await completeRegistration({ attestation, challenge_token });
 }

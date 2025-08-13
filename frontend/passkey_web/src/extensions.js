@@ -35,8 +35,9 @@ const functionRegistry = Object.freeze({
 });
 
 // Executor
-// Returns undefined if key does not exist
-const executeFunctionByKey = (key, ...args) => functionRegistry[key?.trim()]?.(...args);
+const getFunctionRegistryElement = (key) => functionRegistry[key?.trim()];
+
+const executeFunctionByKey = (key, ...args) => getFunctionRegistryElement(key)?.(...args);
 
 // invokeExtensionFunctions is used to invoke extension functions registered in the functionRegistry.
 export const invokeExtensionFunctions = ({ customData = [] }) => {
@@ -45,6 +46,9 @@ export const invokeExtensionFunctions = ({ customData = [] }) => {
   }
 
   const response = customData.map(({ name, metadata = {} }) => {
+    if (typeof getFunctionRegistryElement(name) !== 'function') {
+      return { name, error: `Unknown extension "${name}"` };
+    }
     try {
       return { name, value: executeFunctionByKey(name, metadata) };
     } catch (err) {

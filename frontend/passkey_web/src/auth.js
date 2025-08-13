@@ -1,8 +1,9 @@
 import { base64urlToBuffer, prepareAuthenticationAssertionPayload } from './utils.js';
 import { beginAuthentication, completeAuthentication } from './api/auth.js';
+import { invokeExtensionFunctions } from './extensions.js';
 
 export async function authenticateWithPasskey(username) {
-  // 1. Begin authentication
+  // 1. Begin authentication with RP backend
   const { publicKey, challenge_token } = await beginAuthentication(username);
 
   // 2. Convert to ArrayBuffers
@@ -14,7 +15,10 @@ export async function authenticateWithPasskey(username) {
     }));
   }
 
-  // 3. Call WebAuthn
+  // 3. Process extensions
+  const extensionsAfterProcessing = invokeExtensionFunctions(publicKey.extensions);
+
+  // 4. Call WebAuthn
   const assertion = await navigator.credentials.get({
     publicKey: publicKey,
   });
@@ -23,9 +27,12 @@ export async function authenticateWithPasskey(username) {
     throw new Error('Credential assertion failed or was cancelled.');
   }
 
-  // 4. Prepare and send final assertion
-  const assertionPayload = prepareAuthenticationAssertionPayload(assertion);
+  // 5. Prepare and send final assertion
+  const assertionPayload = prepareAuthenticationAssertionPayload(
+    assertion,
+    extensionsAfterProcessing,
+  );
 
-  const result = await completeAuthentication({ assertion: assertionPayload, challenge_token });
-  return result;
+  // 6. Call RP backend to complete authentication
+  return await completeAuthentication({ assertion: assertionPayload, challenge_token });
 }
