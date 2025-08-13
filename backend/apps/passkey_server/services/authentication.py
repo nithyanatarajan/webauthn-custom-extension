@@ -5,6 +5,8 @@ from fido2.webauthn import PublicKeyCredentialDescriptor, PublicKeyCredentialTyp
 from passkey_server.utils.encoding import b64url_decode
 from passkey_server.utils.jwt import decode_challenge_token, encode_challenge_token
 
+from .extensions import read_extensions_from, validate_extensions_for
+from .extensions_registry import AUTHENTICATION_FLOW, get_available_extensions
 from .rp_server import server
 from .store import get_credential, get_credentials_for_username, update_sign_count
 
@@ -12,7 +14,14 @@ logger = logging.getLogger(__name__)
 
 
 # ---- Authentication ----
-def start(username: str):
+def start(username: str) -> tuple[dict, str]:
+    """
+    Begins the WebAuthn authentication ceremony for a given username.
+    :param username:
+    :return:
+        - publicKeyCredentialRequestOptions (dict)
+        - challenge_token (JWT-encoded state)
+    """
     logger.info('AUTHENTICATION START for %s', username)
 
     # 1. Load registered credentials for this user
@@ -31,11 +40,16 @@ def start(username: str):
 
     # 3. Begin authentication ceremony
     logger.debug('Calling server.authenticate_begin')
-    options, state = server.authenticate_begin(allow_credentials)
-    state['username'] = username  # Required later during verification
-    logger.debug('authenticate_begin succeeded; options prepared')
+    options, state = server.authenticate_begin(
+        credentials=allow_credentials,
+        extensions=get_available_extensions(AUTHENTICATION_FLOW),
+    )
+    logger.debug('authenticate_begin succeeded for username=%s', username)
 
-    # 4. Return publicKey options + JWT-encoded state
+    # 4. Embed state metadata into token (for stateless verification)
+    state['username'] = username  # Required later during verification
+
+    # 5. Return publicKey options + JWT-encoded state
     return dict(options), encode_challenge_token(state)
 
 
@@ -45,22 +59,36 @@ def finish(assertion: dict, challenge_token: str) -> bool:
 
     :param assertion: WebAuthn assertion from the browser
     :param challenge_token: Encoded JWT state from /authenticate/begin
-    :return: True if successful, raises on failure
+    :return: True if authentication succeeded, raises ValueError on failure
     """
     logger.debug('AUTHENTICATION FINISH invoked')
 
     # 1. Decode challenge token and extract session state
     state = decode_challenge_token(challenge_token)
     username = state['username']
+    if not username:
+        logger.error('Malformed challenge token: username missing')
+        raise ValueError('Malformed challenge token')
+
     logger.info('Decoding challenge token succeeded for username=%s', username)
 
-    # 2. Lookup credential in server-side store
+    # 2.1 Lookup credential in server-side store
     credential_id = b64url_decode(assertion['rawId'])
     stored = get_credential(credential_id)
     if not stored:
         logger.error('Credential not found for provided credential_id (user=%s)', username)
         raise ValueError('Credential not found for ID')
     logger.debug('Credential lookup succeeded for user=%s', username)
+
+    # 2.2 Validate extensions in the assertion
+    extensions = assertion.get('response', {}).get('clientExtensionResults', {})
+    if not extensions:
+        logger.warning('No extensions provided in assertion response')
+    else:
+        results = read_extensions_from(extensions)
+        for name, data in results:
+            logger.info('%s: %s', name, data)
+        validate_extensions_for(extensions, AUTHENTICATION_FLOW)
 
     # 3. Complete authentication ceremony (validates signature, challenge, origin)
     logger.debug('Calling server.authenticate_complete for user=%s', username)

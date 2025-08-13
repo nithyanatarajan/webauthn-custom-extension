@@ -7,7 +7,8 @@ from passkey_server.config import Config
 from passkey_server.utils.handle import get_user_handle
 from passkey_server.utils.jwt import decode_challenge_token, encode_challenge_token
 
-from .extensions import get_available_extensions, get_extensions_from, validate_extensions
+from .extensions import read_extensions_from, validate_extensions_for
+from .extensions_registry import REGISTRATION_FLOW, get_available_extensions
 from .rp_server import server
 from .store import store_credential
 
@@ -40,7 +41,7 @@ def start(username: str) -> tuple[dict, str]:
         resident_key_requirement='preferred',
         user_verification='discouraged',
         authenticator_attachment='cross-platform',
-        extensions=get_available_extensions(),
+        extensions=get_available_extensions(REGISTRATION_FLOW),
     )
     logger.debug('register_begin succeeded for username=%s', username)
 
@@ -56,8 +57,9 @@ def finish(attestation: dict, challenge_token: str) -> bool:
     """
     Completes the WebAuthn registration process.
 
-    Validates the signed challenge, attestation response, and account-level token.
-    Saves credential to in-memory store on success.
+    :param attestation: WebAuthn attestation response from the browser
+    :param challenge_token: JWT-encoded state from the start phase
+    :return: True if registration succeeded, raises ValueError on failure
     """
 
     logger.debug('REGISTRATION FINISH invoked')
@@ -69,30 +71,35 @@ def finish(attestation: dict, challenge_token: str) -> bool:
     if not (username and user_handle_b64):
         logger.error('Malformed challenge token: username or user_handle missing')
         raise ValueError('Malformed challenge token')
-    logger.info('Decoded challenge token for username=%s', username)
 
+    logger.info('Decoding challenge token succeeded for username=%s', username)
+
+    # 2. Validate attestation extensions
     extensions = attestation.get('extensions', {})
     if not extensions:
         logger.warning('No extensions provided in attestation response')
     else:
-        results = get_extensions_from(extensions)
+        results = read_extensions_from(extensions)
         for name, data in results:
             logger.info('%s: %s', name, data)
-        validate_extensions(extensions)
+        validate_extensions_for(extensions, REGISTRATION_FLOW)
 
-    # 2. Complete FIDO2/WebAuthn registration
+    # 3. Complete registration ceremony
     logger.debug('Calling server.register_complete for user=%s', username)
-    auth_data = server.register_complete(state, attestation)
+    auth_data = server.register_complete(
+        state,  # from JWT
+        attestation,  # raw browser response (WebAuthn attestation)
+    )
     logger.debug('register_complete succeeded for user=%s', username)
 
-    # 3. Decode user handle from base64
+    # 4. Decode user handle from base64
     try:
         user_handle = base64.urlsafe_b64decode(user_handle_b64.encode('utf-8'))
     except Exception as e:
         logger.error('Invalid user handle encoding for user=%s', username)
         raise ValueError('Invalid user handle encoding') from e
 
-    # 6. Store credential in in-memory DB
+    # 5. Store credential in in-memory DB
     store_credential(
         credential_id=auth_data.credential_data.credential_id,
         user_handle=user_handle,

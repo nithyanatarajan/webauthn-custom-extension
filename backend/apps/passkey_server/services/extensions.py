@@ -1,32 +1,28 @@
 import logging
 
+from typing import Any
+
 from passkey_server.exceptions.errors import ExtensionValidationError
 from passkey_server.services.validation import verify_extension_with_retries
 
+from .extensions_registry import _custom_data_key, get_extension_functions
+
 logger = logging.getLogger(__name__)
 
-_custom_data_key = 'customData'
-_extension_functions = [
-    {'name': 'timeInfo'},
-    {'name': 'deviceInfo'},
-    {'name': 'someOtherExtension', 'metadata': {'destination': 'EXTN', 'path': 'something'}},
-]
 
-
-def get_available_extensions():
-    logger.debug('Providing available extensions: %s', [f.get('name') for f in _extension_functions])
-    return {_custom_data_key: _extension_functions}
-
-
-def get_extensions_from(extensions):
-    items = [(f['name'], f.get('value') or f.get('error')) for f in extensions.get(_custom_data_key, [])]
+def read_extensions_from(extensions: dict[str, Any]) -> list[tuple[str, Any]]:
+    items = [
+        (f['name'], f.get('value') or f.get('error'))
+        for f in (extensions or {}).get(_custom_data_key, []) or []
+        if isinstance(f, dict) and 'name' in f
+    ]
     logger.debug('Parsed %d extension result(s)', len(items))
     return items
 
 
-def validate_extensions(extensions: dict):
-    # Ensure required extensions are present
-    required_names = [f.get('name') for f in _extension_functions]
+def validate_extensions_for(extensions: dict[str, Any], flow: str) -> None:
+    funcs = get_extension_functions(flow)
+    required_names = [f.get('name') for f in funcs]
     provided_list = (extensions or {}).get(_custom_data_key, []) or []
     provided_names = [f.get('name') for f in provided_list if isinstance(f, dict)]
 
@@ -37,15 +33,15 @@ def validate_extensions(extensions: dict):
         logger.error('Missing required extensions: %s', missing)
         raise ExtensionValidationError(f'Missing required extensions: {", ".join(missing)}')
 
-    # Verify each extension (server-side where applicable)
-    for ext in _extension_functions:
+    # Server-side verification for required extensions that need it
+    for ext in funcs:
         verify_extension(ext)
 
 
-def verify_extension(extension: dict):
+async def verify_extension(extension: dict[str, Any]) -> None:
     metadata = (extension or {}).get('metadata') or {}
     if metadata.get('destination') == 'EXTN':
         path = metadata.get('path') or extension.get('name') or ''
         logger.info('Verifying extension via EXT server: path=%s', path)
-        return verify_extension_with_retries(path)
+        return await verify_extension_with_retries(path)
     return None
